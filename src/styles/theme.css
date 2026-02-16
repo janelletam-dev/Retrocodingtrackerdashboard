@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --font-pixel: "Press Start 2P", cursive;
+  --font-terminal: "VT323", monospace;
+
+  --color-retro-bg: #f3e6c5;
+  --color-retro-grid: #e6d8b5;
+  --color-retro-ink: #1a1a1a;
+  --color-retro-card: #fffbf0;
+  --color-retro-orange: #ffb86c;
+  --color-retro-yellow: #f1fa8c;
+  --color-retro-red: #ff5555;
+  --color-retro-green: #50fa7b;
+  
+  --shadow-retro: 4px 4px 0px 0px #1a1a1a;
+  --shadow-retro-sm: 2px 2px 0px 0px #1a1a1a;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-retro-bg);
+    color: var(--color-retro-ink);
+    font-family: var(--font-terminal);
+    background-image: 
+      linear-gradient(var(--color-retro-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-retro-grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    min-height: 100vh;
+    image-rendering: pixelated;
+  }
+
+  h1, h2, h3, .font-pixel {
+    font-family: var(--font-pixel);
+    text-transform: uppercase;
+  }
+}
+
+@layer components {
+  .retro-card {
+    background: var(--color-retro-card);
+    border: 3px solid var(--color-retro-ink);
+    box-shadow: var(--shadow-retro);
+  }
+
+  .retro-btn {
+    background: var(--color-retro-yellow);
+    border: 2px solid var(--color-retro-ink);
+    box-shadow: var(--shadow-retro-sm);
+    transition: all 0.1s;
+    cursor: pointer;
+    font-family: var(--font-pixel);
+    text-transform: uppercase;
+  }
+
+  .retro-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+
+  .retro-input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--color-retro-ink);
+    font-family: var(--font-terminal);
+  }
+
+  .retro-input:focus {
+    outline: none;
+    border-bottom-color: var(--color-retro-red);
+  }
+
+  .pixel-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-retro-ink);
+    background: white;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+  }
+
+  .pixel-checkbox::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: var(--color-retro-ink);
+    transform: scale(0);
+    transition: 0.1s transform;
+  }
+
+  .pixel-checkbox:checked::before {
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-pulse-red {
+  animation: pulse-red 2s infinite;
+}
