@@ -4,33 +4,38 @@ import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_store.ts";
 
+// 1. Define CORS headers for the manual OPTIONS handler
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+};
+
 const app = new Hono();
 
 // Enable logger
 app.use('*', logger(console.log));
 
-// Enable CORS for all routes and methods
+// Enable Hono CORS middleware as a secondary layer
 app.use(
   "/*",
   cors({
     origin: "*",
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "x-client-info", "apikey"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
   }),
 );
 
-
-// Helper function to get authenticated user ID
+// Helper function to get authenticated user ID using custom secrets
 async function getAuthenticatedUserId(request: Request): Promise<string | null> {
   try {
     const supabase = createClient(
-      Deno.env.get('SB_URL') ?? '',
-      Deno.env.get('SB_SERVICE_ROLE_KEY') ?? '',
+      // Prefer SB_ variables if present, fall back to SUPABASE_ defaults
+      Deno.env.get('SB_URL') ?? Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SB_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
-
-
     
     const accessToken = request.headers.get('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -57,12 +62,12 @@ async function getAuthenticatedUserId(request: Request): Promise<string | null> 
   }
 }
 
-// Health check endpoint (public)
+// Health check endpoint
 app.get("/make-server-91171845/health", (c) => {
   return c.json({ status: "ok" });
 });
 
-// Sign up endpoint (public)
+// Sign up endpoint using custom secrets
 app.post("/make-server-91171845/signup", async (c) => {
   try {
     const body = await c.req.json();
@@ -73,45 +78,37 @@ app.post("/make-server-91171845/signup", async (c) => {
     }
     
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SB_URL') ?? '',
+      Deno.env.get('SB_SERVICE_ROLE_KEY') ?? '',
     );
     
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
       user_metadata: { name: name || 'Vibe User' },
-      // Automatically confirm the user's email since an email server hasn't been configured.
       email_confirm: true
     });
     
     if (error) {
-      console.log(`Error creating user during signup: ${error.message}`);
       return c.json({ error: error.message }, 400);
     }
     
-    console.log(`User created successfully: ${data.user?.id}`);
     return c.json({ 
       success: true, 
       userId: data.user?.id,
       message: 'Account created successfully!' 
     });
   } catch (error) {
-    console.log(`Exception in signup endpoint: ${error}`);
-    return c.json({ error: 'Signup failed. Please try again.' }, 500);
+    return c.json({ error: 'Signup failed' }, 500);
   }
 });
 
-// Get all user data (protected)
+// Get all user data
 app.get("/make-server-91171845/data", async (c) => {
   try {
     const userId = await getAuthenticatedUserId(c.req.raw);
+    if (!userId) return c.json({ error: 'Unauthorized' }, 401);
     
-    if (!userId) {
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    // Fetch all user data from KV store
     const keys = [
       `user:${userId}:tasks`,
       `user:${userId}:logs`,
@@ -123,13 +120,13 @@ app.get("/make-server-91171845/data", async (c) => {
     
     const results = await kv.mget(keys);
     
-    const data = {
+    return c.json({
       tasks: results[0] || [],
       logs: results[1] || [],
       timerSessions: results[2] || [],
       settings: results[3] || {
         projectName: 'NEON_DRIFTER_V2',
-        startDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        startDate: new Date().toISOString().split('T')[0],
         targetProjects: 100,
         docsLink: 'https://docs.vibe-os.dev',
         ghLink: 'https://github.com/vibe-os',
@@ -137,150 +134,65 @@ app.get("/make-server-91171845/data", async (c) => {
       },
       timer: results[4] || { totalSeconds: 0 },
       horseRevealShuffle: results[5] || null,
-    };
-    
-    console.log(`Successfully fetched data for user: ${userId}`);
-    return c.json(data);
+    });
   } catch (error) {
-    console.log(`Exception in get data endpoint: ${error}`);
     return c.json({ error: 'Failed to fetch data' }, 500);
   }
 });
 
-// Save tasks (protected)
+// Generic save endpoints
 app.post("/make-server-91171845/tasks", async (c) => {
-  console.log('=== TASKS ENDPOINT HIT ===');
-  console.log('Headers:', Object.fromEntries(c.req.raw.headers.entries()));
-  
-  try {
-    const userId = await getAuthenticatedUserId(c.req.raw);
-    
-    if (!userId) {
-      console.log('User authentication failed - returning 401');
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    const body = await c.req.json();
-    const { tasks } = body;
-    
-    await kv.set(`user:${userId}:tasks`, tasks);
-    
-    console.log(`Tasks saved for user: ${userId}`);
-    return c.json({ success: true });
-  } catch (error) {
-    console.log(`Exception in save tasks endpoint: ${error}`);
-    return c.json({ error: 'Failed to save tasks' }, 500);
-  }
+  const userId = await getAuthenticatedUserId(c.req.raw);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const { tasks } = await c.req.json();
+  await kv.set(`user:${userId}:tasks`, tasks);
+  return c.json({ success: true });
 });
 
-// Save logs (protected)
 app.post("/make-server-91171845/logs", async (c) => {
-  try {
-    const userId = await getAuthenticatedUserId(c.req.raw);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    const body = await c.req.json();
-    const { logs } = body;
-    
-    await kv.set(`user:${userId}:logs`, logs);
-    
-    console.log(`Logs saved for user: ${userId}`);
-    return c.json({ success: true });
-  } catch (error) {
-    console.log(`Exception in save logs endpoint: ${error}`);
-    return c.json({ error: 'Failed to save logs' }, 500);
-  }
+  const userId = await getAuthenticatedUserId(c.req.raw);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const { logs } = await c.req.json();
+  await kv.set(`user:${userId}:logs`, logs);
+  return c.json({ success: true });
 });
 
-// Save settings (protected)
 app.post("/make-server-91171845/settings", async (c) => {
-  try {
-    const userId = await getAuthenticatedUserId(c.req.raw);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    const body = await c.req.json();
-    const { settings } = body;
-    
-    await kv.set(`user:${userId}:settings`, settings);
-    
-    console.log(`Settings saved for user: ${userId}`);
-    return c.json({ success: true });
-  } catch (error) {
-    console.log(`Exception in save settings endpoint: ${error}`);
-    return c.json({ error: 'Failed to save settings' }, 500);
-  }
+  const userId = await getAuthenticatedUserId(c.req.raw);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const { settings } = await c.req.json();
+  await kv.set(`user:${userId}:settings`, settings);
+  return c.json({ success: true });
 });
 
-// Save timer (protected)
 app.post("/make-server-91171845/timer", async (c) => {
-  try {
-    const userId = await getAuthenticatedUserId(c.req.raw);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    const body = await c.req.json();
-    const { totalSeconds } = body;
-    
-    await kv.set(`user:${userId}:timer`, { totalSeconds });
-    
-    console.log(`Timer saved for user: ${userId}`);
-    return c.json({ success: true });
-  } catch (error) {
-    console.log(`Exception in save timer endpoint: ${error}`);
-    return c.json({ error: 'Failed to save timer' }, 500);
-  }
+  const userId = await getAuthenticatedUserId(c.req.raw);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const { totalSeconds } = await c.req.json();
+  await kv.set(`user:${userId}:timer`, { totalSeconds });
+  return c.json({ success: true });
 });
 
-// Save horse reveal shuffle (protected)
 app.post("/make-server-91171845/horse-shuffle", async (c) => {
-  try {
-    const userId = await getAuthenticatedUserId(c.req.raw);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    const body = await c.req.json();
-    const { shuffle } = body;
-    
-    await kv.set(`user:${userId}:horse_reveal_shuffle`, shuffle);
-    
-    console.log(`Horse reveal shuffle saved for user: ${userId}`);
-    return c.json({ success: true });
-  } catch (error) {
-    console.log(`Exception in save horse shuffle endpoint: ${error}`);
-    return c.json({ error: 'Failed to save horse shuffle' }, 500);
-  }
+  const userId = await getAuthenticatedUserId(c.req.raw);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const { shuffle } = await c.req.json();
+  await kv.set(`user:${userId}:horse_reveal_shuffle`, shuffle);
+  return c.json({ success: true });
 });
 
-// Save timer sessions (protected)
 app.post("/make-server-91171845/timer-sessions", async (c) => {
-  try {
-    const userId = await getAuthenticatedUserId(c.req.raw);
-    
-    if (!userId) {
-      return c.json({ error: 'Unauthorized - Please sign in' }, 401);
-    }
-    
-    const body = await c.req.json();
-    const { timerSessions } = body;
-    
-    await kv.set(`user:${userId}:timer_sessions`, timerSessions);
-    
-    console.log(`Timer sessions saved for user: ${userId}, count: ${timerSessions?.length || 0}`);
-    return c.json({ success: true });
-  } catch (error) {
-    console.log(`Exception in save timer sessions endpoint: ${error}`);
-    return c.json({ error: 'Failed to save timer sessions' }, 500);
-  }
+  const userId = await getAuthenticatedUserId(c.req.raw);
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+  const { timerSessions } = await c.req.json();
+  await kv.set(`user:${userId}:timer_sessions`, timerSessions);
+  return c.json({ success: true });
 });
 
-Deno.serve(app.fetch);
+// 2. Final wrapper to handle OPTIONS preflight manually
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+  return app.fetch(req);
+});
