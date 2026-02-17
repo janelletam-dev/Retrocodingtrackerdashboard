@@ -2,7 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import * as kv from "./kv_store.tsx";
+import * as kv from "./kv_store.ts";
 
 const app = new Hono();
 
@@ -21,13 +21,16 @@ app.use(
   }),
 );
 
+
 // Helper function to get authenticated user ID
 async function getAuthenticatedUserId(request: Request): Promise<string | null> {
   try {
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SB_URL') ?? '',
+      Deno.env.get('SB_SERVICE_ROLE_KEY') ?? '',
     );
+
+
     
     const accessToken = request.headers.get('Authorization')?.split(' ')[1];
     if (!accessToken) {
