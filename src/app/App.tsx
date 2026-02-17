@@ -21,7 +21,9 @@ import {
   Trophy,
   LogOut,
   LogIn,
-  Database
+  Database,
+  Trash2,
+  X as XIcon
 } from 'lucide-react';
 import pixelHorseHero from 'figma:asset/f7e8305ecb8b6adb45346ed46ec1d753558ee4bf.png';
 import timeToRestImg from 'figma:asset/be18bd135608a92104663a585d83e802774f217e.png';
@@ -69,6 +71,10 @@ export default function App() {
   const [isEditingTarget, setIsEditingTarget] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
   const [newLogText, setNewLogText] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskText, setEditingTaskText] = useState('');
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editingLogText, setEditingLogText] = useState('');
   
   // Editable Links
   const [docsLink, setDocsLink] = useState('https://docs.vibe-os.dev');
@@ -142,7 +148,14 @@ export default function App() {
   // Load user data from backend
   const loadUserData = async () => {
     try {
+      console.log('[LOAD] Loading user data from backend...');
       const data = await api.getUserData();
+      
+      console.log('[LOAD] Setting state with loaded data:', {
+        tasks: data.tasks?.length || 0,
+        logs: data.logs?.length || 0,
+        timerSessions: data.timerSessions?.length || 0,
+      });
       
       setTasks(data.tasks);
       setLogs(data.logs);
@@ -156,9 +169,10 @@ export default function App() {
       setTotalSeconds(data.timer.totalSeconds);
       setHorseShuffle(data.horseRevealShuffle);
       
+      console.log('[LOAD] User data loaded successfully');
       toast.success('Data loaded successfully!');
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('[LOAD] Error loading user data:', error);
       toast.error('Failed to load data');
     }
   };
@@ -175,8 +189,9 @@ export default function App() {
           setIsSaving(true);
           await saveFunction();
           setLastSaveTime(new Date());
+          console.log('✓ Data saved successfully');
         } catch (error) {
-          console.error('Error saving data:', error);
+          console.error('✗ Error saving data:', error);
           toast.error('Failed to sync data');
         } finally {
           setIsSaving(false);
@@ -185,9 +200,27 @@ export default function App() {
     }, 1000); // Save 1 second after last change
   }, [isAuthenticated]);
 
+  // Immediate save function (no debounce) for critical saves
+  const immediateSave = useCallback(async (saveFunction: () => Promise<void>) => {
+    if (isAuthenticated) {
+      try {
+        setIsSaving(true);
+        await saveFunction();
+        setLastSaveTime(new Date());
+        console.log('✓ Data saved immediately');
+      } catch (error) {
+        console.error('✗ Error saving data immediately:', error);
+        throw error;
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  }, [isAuthenticated]);
+
   // Save tasks when they change
   useEffect(() => {
     if (isAuthenticated && !isLoadingData) {
+      console.log(`[AUTO-SAVE] Tasks changed (${tasks.length} tasks), scheduling save...`);
       debouncedSave(() => api.saveTasks(tasks));
     }
   }, [tasks, isAuthenticated, isLoadingData, debouncedSave]);
@@ -195,6 +228,7 @@ export default function App() {
   // Save logs when they change
   useEffect(() => {
     if (isAuthenticated && !isLoadingData) {
+      console.log(`[AUTO-SAVE] Logs changed (${logs.length} logs), scheduling save...`);
       debouncedSave(() => api.saveLogs(logs));
     }
   }, [logs, isAuthenticated, isLoadingData, debouncedSave]);
@@ -282,6 +316,32 @@ export default function App() {
 
   const handleSignOut = async () => {
     try {
+      // Clear any pending debounced saves
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Save all data immediately before signing out
+      console.log('Saving all data before logout...');
+      await Promise.all([
+        api.saveTasks(tasks),
+        api.saveLogs(logs),
+        api.saveTimerSessions(timerSessions),
+        api.saveSettings({
+          projectName,
+          startDate,
+          targetProjects,
+          docsLink,
+          ghLink,
+          spotifyLink,
+        }),
+        api.saveTimer(totalSeconds),
+      ]).catch(error => {
+        console.error('Error saving data before logout:', error);
+      });
+      
+      console.log('All data saved, signing out...');
+      
       await api.signOut();
       setIsAuthenticated(false);
       setUserEmail(null);
@@ -389,6 +449,66 @@ export default function App() {
     setLogs([newLog, ...logs]);
     setNewLogText('');
     toast.success("Added to Small Wins!");
+  };
+
+  const handleDeleteTask = (id: string) => {
+    const taskToDelete = tasks.find(t => t.id === id);
+    if (taskToDelete && confirm(`Delete task: "${taskToDelete.text}"?`)) {
+      setTasks(tasks.filter(t => t.id !== id));
+      toast.success("Task deleted");
+    }
+  };
+
+  const handleEditTask = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      setEditingTaskId(id);
+      setEditingTaskText(task.text);
+    }
+  };
+
+  const handleSaveTaskEdit = () => {
+    if (editingTaskId && editingTaskText.trim()) {
+      setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, text: editingTaskText } : t));
+      setEditingTaskId(null);
+      setEditingTaskText('');
+      toast.success("Task updated");
+    }
+  };
+
+  const handleCancelTaskEdit = () => {
+    setEditingTaskId(null);
+    setEditingTaskText('');
+  };
+
+  const handleDeleteLog = (id: string) => {
+    const logToDelete = logs.find(l => l.id === id);
+    if (logToDelete && confirm(`Delete victory: "${logToDelete.text}"?`)) {
+      setLogs(logs.filter(l => l.id !== id));
+      toast.success("Victory deleted");
+    }
+  };
+
+  const handleEditLog = (id: string) => {
+    const log = logs.find(l => l.id === id);
+    if (log) {
+      setEditingLogId(id);
+      setEditingLogText(log.text);
+    }
+  };
+
+  const handleSaveLogEdit = () => {
+    if (editingLogId && editingLogText.trim()) {
+      setLogs(logs.map(l => l.id === editingLogId ? { ...l, text: editingLogText } : l));
+      setEditingLogId(null);
+      setEditingLogText('');
+      toast.success("Victory updated");
+    }
+  };
+
+  const handleCancelLogEdit = () => {
+    setEditingLogId(null);
+    setEditingLogText('');
   };
 
   const copyProfileLink = () => {
@@ -776,9 +896,55 @@ export default function App() {
                         onChange={() => toggleTask(task.id)}
                         className="pixel-checkbox w-6 h-6" 
                       />
-                      <span className={`${task.completed ? "line-through text-gray-400" : "text-black"} flex-1`}>
-                        {task.text}
-                      </span>
+                      {editingTaskId === task.id ? (
+                        <>
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editingTaskText}
+                            onChange={(e) => setEditingTaskText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveTaskEdit();
+                              if (e.key === 'Escape') handleCancelTaskEdit();
+                            }}
+                            className="flex-1 text-xl md:text-2xl border-b-2 border-black bg-transparent focus:outline-none"
+                          />
+                          <button
+                            onClick={handleSaveTaskEdit}
+                            className="p-1 hover:bg-green-100 border border-green-600 rounded transition-all"
+                            title="Save"
+                          >
+                            <Check size={18} className="text-green-600" />
+                          </button>
+                          <button
+                            onClick={handleCancelTaskEdit}
+                            className="p-1 hover:bg-red-100 border border-red-600 rounded transition-all"
+                            title="Cancel"
+                          >
+                            <XIcon size={18} className="text-red-600" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className={`${task.completed ? "line-through text-gray-400" : "text-black"} flex-1`}>
+                            {task.text}
+                          </span>
+                          <button
+                            onClick={() => handleEditTask(task.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-100 border border-transparent hover:border-blue-600 rounded transition-all"
+                            title="Edit task"
+                          >
+                            <Pencil size={16} className="text-blue-600" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 border border-transparent hover:border-red-600 rounded transition-all"
+                            title="Delete task"
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                          </button>
+                        </>
+                      )}
                     </motion.li>
                   ))}
                 </AnimatePresence>
@@ -823,12 +989,60 @@ export default function App() {
                       initial={{ opacity: 0, x: -5 }}
                       animate={{ opacity: 1, x: 0 }}
                       key={log.id} 
-                      className="flex gap-4 p-2 hover:bg-white transition-colors border-b border-black/5 last:border-0"
+                      className="flex gap-4 p-2 hover:bg-white transition-colors border-b border-black/5 last:border-0 group"
                     >
                       <span className="font-bold text-black min-w-[70px] shrink-0">
                         [{new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}]
                       </span>
-                      <span className="uppercase">{log.text}</span>
+                      {editingLogId === log.id ? (
+                        <>
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editingLogText}
+                            onChange={(e) => setEditingLogText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveLogEdit();
+                              if (e.key === 'Escape') handleCancelLogEdit();
+                            }}
+                            className="flex-1 border-b border-black bg-transparent focus:outline-none uppercase text-sm"
+                          />
+                          <button
+                            onClick={handleSaveLogEdit}
+                            className="p-0.5 hover:bg-green-100 border border-green-600 rounded transition-all"
+                            title="Save"
+                          >
+                            <Check size={14} className="text-green-600" />
+                          </button>
+                          <button
+                            onClick={handleCancelLogEdit}
+                            className="p-0.5 hover:bg-red-100 border border-red-600 rounded transition-all"
+                            title="Cancel"
+                          >
+                            <XIcon size={14} className="text-red-600" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="uppercase flex-1">{log.text}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleEditLog(log.id)}
+                              className="p-0.5 hover:bg-blue-100 border border-transparent hover:border-blue-600 rounded transition-all"
+                              title="Edit victory"
+                            >
+                              <Pencil size={14} className="text-blue-600" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLog(log.id)}
+                              className="p-0.5 hover:bg-red-100 border border-transparent hover:border-red-600 rounded transition-all"
+                              title="Delete victory"
+                            >
+                              <Trash2 size={14} className="text-red-600" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </motion.li>
                   ))
                 ) : (
@@ -1001,6 +1215,14 @@ export default function App() {
           isOpen={isSmallWinsLogOpen}
           onClose={() => setIsSmallWinsLogOpen(false)}
           logs={logs}
+          onEditLog={(id, newText) => {
+            setLogs(logs.map(l => l.id === id ? { ...l, text: newText } : l));
+            toast.success("Victory updated");
+          }}
+          onDeleteLog={(id) => {
+            setLogs(logs.filter(l => l.id !== id));
+            toast.success("Victory deleted");
+          }}
         />
 
         <DataStatusModal

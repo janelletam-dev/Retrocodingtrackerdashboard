@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Trophy, Calendar } from 'lucide-react';
+import { X, Trophy, Calendar, Pencil, Trash2, Check, X as XIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface SmallWinsLogModalProps {
@@ -11,10 +11,39 @@ interface SmallWinsLogModalProps {
     text: string;
     date: string;
   }>;
+  onEditLog?: (id: string, newText: string) => void;
+  onDeleteLog?: (id: string) => void;
 }
 
-export const SmallWinsLogModal = ({ isOpen, onClose, logs }: SmallWinsLogModalProps) => {
+export const SmallWinsLogModal = ({ isOpen, onClose, logs, onEditLog, onDeleteLog }: SmallWinsLogModalProps) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+
   if (!isOpen) return null;
+
+  const handleEdit = (id: string, text: string) => {
+    setEditingId(id);
+    setEditingText(text);
+  };
+
+  const handleSave = () => {
+    if (editingId && editingText.trim() && onEditLog) {
+      onEditLog(editingId, editingText);
+      setEditingId(null);
+      setEditingText('');
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditingText('');
+  };
+
+  const handleDelete = (id: string, text: string) => {
+    if (onDeleteLog && confirm(`Delete victory: "${text}"?`)) {
+      onDeleteLog(id);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -78,13 +107,67 @@ export const SmallWinsLogModal = ({ isOpen, onClose, logs }: SmallWinsLogModalPr
                       <Calendar size={12} />
                       {format(new Date(log.date), 'MMMM dd, yyyy').toUpperCase()}
                     </div>
-                    <div className="text-[10px] text-gray-400 font-mono">
-                      {format(new Date(log.date), 'HH:mm:ss')}
+                    <div className="flex items-center gap-2">
+                      <div className="text-[10px] text-gray-400 font-mono">
+                        {format(new Date(log.date), 'HH:mm:ss')}
+                      </div>
+                      {editingId !== log.id && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {onEditLog && (
+                            <button
+                              onClick={() => handleEdit(log.id, log.text)}
+                              className="p-1 hover:bg-blue-100 border border-transparent hover:border-blue-600 rounded transition-all"
+                              title="Edit victory"
+                            >
+                              <Pencil size={14} className="text-blue-600" />
+                            </button>
+                          )}
+                          {onDeleteLog && (
+                            <button
+                              onClick={() => handleDelete(log.id, log.text)}
+                              className="p-1 hover:bg-red-100 border border-transparent hover:border-red-600 rounded transition-all"
+                              title="Delete victory"
+                            >
+                              <Trash2 size={14} className="text-red-600" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="text-lg font-bold text-black uppercase tracking-tight">
-                    {log.text}
-                  </div>
+                  {editingId === log.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSave();
+                          if (e.key === 'Escape') handleCancel();
+                        }}
+                        className="flex-1 text-lg font-bold text-black uppercase tracking-tight border-b-2 border-black bg-transparent focus:outline-none"
+                      />
+                      <button
+                        onClick={handleSave}
+                        className="p-1 hover:bg-green-100 border border-green-600 rounded transition-all"
+                        title="Save"
+                      >
+                        <Check size={18} className="text-green-600" />
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="p-1 hover:bg-red-100 border border-red-600 rounded transition-all"
+                        title="Cancel"
+                      >
+                        <XIcon size={18} className="text-red-600" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-lg font-bold text-black uppercase tracking-tight">
+                      {log.text}
+                    </div>
+                  )}
                 </motion.div>
               ))
             ) : (

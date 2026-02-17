@@ -21,7 +21,9 @@ export const supabase = getSupabaseClient();
 // Get access token from current session
 export async function getAccessToken(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
+  const token = session?.access_token || null;
+  console.log(`[AUTH] Access token ${token ? 'found' : 'NOT FOUND'}:`, token ? `${token.substring(0, 20)}...` : 'null');
+  return token;
 }
 
 // Sign up new user
@@ -73,6 +75,7 @@ export async function getUserData() {
   }
 
   try {
+    console.log('[API] Fetching user data from backend...');
     const response = await fetch(`${API_BASE}/data`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -87,13 +90,15 @@ export async function getUserData() {
       } catch (e) {
         errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
       }
-      console.error(`getUserData failed: ${errorMessage}`);
+      console.error(`[API] getUserData failed: ${errorMessage}`);
       throw new Error(errorMessage);
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log(`[API] User data loaded: ${data.tasks?.length || 0} tasks, ${data.logs?.length || 0} logs`);
+    return data;
   } catch (error) {
-    console.error('getUserData network error:', error);
+    console.error('[API] getUserData network error:', error);
     throw error;
   }
 }
@@ -106,6 +111,10 @@ export async function saveTasks(tasks: any[]) {
   }
 
   try {
+    console.log(`[API] Saving ${tasks.length} tasks to backend...`);
+    console.log(`[API] Using token: ${accessToken.substring(0, 20)}...`);
+    console.log(`[API] Request URL: ${API_BASE}/tasks`);
+    
     const response = await fetch(`${API_BASE}/tasks`, {
       method: 'POST',
       headers: {
@@ -114,6 +123,8 @@ export async function saveTasks(tasks: any[]) {
       },
       body: JSON.stringify({ tasks }),
     });
+    
+    console.log(`[API] Response status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       let errorMessage = 'Failed to save tasks';
@@ -123,12 +134,14 @@ export async function saveTasks(tasks: any[]) {
       } catch (e) {
         errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
       }
+      console.error(`[API] Error saving tasks: ${errorMessage}`);
       throw new Error(errorMessage);
     }
 
+    console.log(`[API] Tasks saved successfully`);
     return response.json();
   } catch (error) {
-    // Silently fail for tasks to avoid spam
+    console.error('[API] Exception saving tasks:', error);
     throw error;
   }
 }
@@ -141,6 +154,7 @@ export async function saveLogs(logs: any[]) {
   }
 
   try {
+    console.log(`[API] Saving ${logs.length} logs (victories) to backend...`);
     const response = await fetch(`${API_BASE}/logs`, {
       method: 'POST',
       headers: {
@@ -158,12 +172,14 @@ export async function saveLogs(logs: any[]) {
       } catch (e) {
         errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
       }
+      console.error(`[API] Error saving logs: ${errorMessage}`);
       throw new Error(errorMessage);
     }
 
+    console.log(`[API] Logs saved successfully`);
     return response.json();
   } catch (error) {
-    // Silently fail for logs to avoid spam
+    console.error('[API] Exception saving logs:', error);
     throw error;
   }
 }

@@ -2,7 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import * as kv from "./kv_store.tsx";
+import * as kv from "./kv_store.ts";
 
 const app = new Hono();
 
@@ -146,14 +146,10 @@ app.get("/make-server-91171845/data", async (c) => {
 
 // Save tasks (protected)
 app.post("/make-server-91171845/tasks", async (c) => {
-  console.log('=== TASKS ENDPOINT HIT ===');
-  console.log('Headers:', Object.fromEntries(c.req.raw.headers.entries()));
-  
   try {
     const userId = await getAuthenticatedUserId(c.req.raw);
     
     if (!userId) {
-      console.log('User authentication failed - returning 401');
       return c.json({ error: 'Unauthorized - Please sign in' }, 401);
     }
     
