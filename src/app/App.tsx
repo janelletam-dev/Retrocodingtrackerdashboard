@@ -57,9 +57,9 @@ export default function App() {
   const [projectName, setProjectName] = useState('NEON_DRIFTER_V2');
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [startDate, setStartDate] = useState(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
+    // Default Mission Start = Today (Day 1)
+    const today = new Date();
+    return today.toISOString().split('T')[0];
   });
   const [isEditingStartDate, setIsEditingStartDate] = useState(false);
   const [isYearArchiveOpen, setIsYearArchiveOpen] = useState(false);
@@ -108,6 +108,14 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [showDataBanner, setShowDataBanner] = useState(true);
+
+  // Keep `date` in sync with the real system date so DAY N advances correctly
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDate(new Date());
+    }, 60_000); // update once per minute
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (isRunning) {
@@ -166,7 +174,11 @@ export default function App() {
       setLogs(safeLogs);
       setTimerSessions(safeTimerSessions);
       setProjectName(data.settings?.projectName || 'NEON_DRIFTER_V2');
-      setStartDate(data.settings?.startDate || new Date(Date.now() + 86400000).toISOString().split('T')[0]);
+      // If no startDate saved yet, default Mission Start to "today"
+      setStartDate(
+        data.settings?.startDate
+          || new Date().toISOString().split('T')[0]
+      );
       setTargetProjects(data.settings?.targetProjects || 100);
       setDocsLink(data.settings?.docsLink || 'https://docs.vibe-os.dev');
       setGhLink(data.settings?.ghLink || 'https://github.com/vibe-os');
@@ -734,7 +746,7 @@ export default function App() {
 
               <div>
                 <h1 className="text-7xl md:text-9xl text-black font-bold tracking-tighter leading-none mb-1">
-                  DAY {Math.floor((date.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24)) + 1}
+                  DAY {Math.max(1, Math.floor((date.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24)) + 1)}
                 </h1>
                 <div className="font-pixel text-sm md:text-xl text-gray-500 tracking-[0.2em]">
                   {currentFormattedDate}
