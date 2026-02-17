@@ -84,7 +84,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="mb-6 p-4 bg-yellow-100 border-2 border-black">
               <p className="font-pixel text-[10px] text-black leading-relaxed">
                 {isSignUpMode
-                  ? '⚡ CREATE YOUR VIBE OS ACCOUNT TO START TRACKING PRODUCTIVITY'
+                  ? '⚡ CREATE YOUR ACCOUNT TO START TRACKING PRODUCTIVITY'
                   : '⚡ SIGN IN TO ACCESS YOUR PRODUCTIVITY DATA'}
               </p>
             </div>

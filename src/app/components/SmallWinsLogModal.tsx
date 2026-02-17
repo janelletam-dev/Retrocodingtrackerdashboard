@@ -180,7 +180,7 @@ export const SmallWinsLogModal = ({ isOpen, onClose, logs, onEditLog, onDeleteLo
 
           {/* Footer */}
           <div className="mt-8 pt-4 border-t-2 border-black flex justify-between items-center">
-            <span className="text-[10px] font-pixel text-gray-400">VIBE_OS // ARCHIVE_v2.1</span>
+            <span className="text-[10px] font-pixel text-gray-400">VIBECODING_TRACKER // ARCHIVE</span>
             <button 
               onClick={onClose}
               className="px-8 py-3 bg-black text-white font-pixel text-[10px] hover:bg-gray-800 transition-all shadow-[6px_6px_0px_#666] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none uppercase"

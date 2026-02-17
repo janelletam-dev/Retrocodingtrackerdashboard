@@ -299,7 +299,7 @@ export default function App() {
       setIsAuthModalOpen(false);
       
       await loadUserData();
-      toast.success('Welcome back to Vibe OS!');
+      toast.success('Welcome back to Vibecoding Tracker!');
     } catch (error: any) {
       console.error('Sign in error:', error);
       setAuthError(error.message || 'Sign in failed');
@@ -321,7 +321,7 @@ export default function App() {
       setUserEmail(email);
       setIsAuthModalOpen(false);
       
-      toast.success('Account created! Welcome to Vibe OS!');
+      toast.success('Account created! Welcome to Vibecoding Tracker!');
     } catch (error: any) {
       console.error('Sign up error:', error);
       setAuthError(error.message || 'Sign up failed');
@@ -534,8 +534,9 @@ export default function App() {
   };
 
   const copyProfileLink = () => {
-    navigator.clipboard.writeText("https://vibe-os.dev/u/lucky_stallion");
-    toast.success("Public profile link copied!");
+    const deployedUrl = 'https://retrovibecoding.figma.site/';
+    navigator.clipboard.writeText(deployedUrl);
+    toast.success("Link copied!");
   };
 
   const handleExportData = () => {
@@ -616,7 +617,7 @@ export default function App() {
     return (
       <div className="p-4 md:p-8 min-h-screen relative overflow-x-hidden bg-[#e6e2d1] flex items-center justify-center">
         <div className="retro-card p-12 text-center">
-          <div className="font-pixel text-xl mb-4">VIBE OS v2.1</div>
+          <div className="font-pixel text-xl mb-4">VIBECODING TRACKER</div>
           <div className="font-pixel text-sm text-gray-600">INITIALIZING SYSTEM...</div>
         </div>
       </div>
@@ -632,25 +633,7 @@ export default function App() {
         {/* TOP NAV */}
         <header className="flex flex-col md:flex-row justify-between items-center border-b-2 border-black pb-4 gap-4 md:gap-0 mb-8">
           <div className="flex items-center gap-4">
-            <div className="font-pixel text-sm md:text-base font-bold">VIBE OS v2.1</div>
-            <button 
-              onClick={copyProfileLink}
-              className="hidden md:flex items-center gap-2 text-[10px] bg-white border-2 border-black px-2 py-1 hover:bg-gray-100 transition-all cursor-pointer group shadow-[2px_2px_0px_black] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-            >
-              <LinkIcon size={12} />
-              <span className="group-hover:hidden">SHARE_PROFILE</span>
-              <span className="hidden group-hover:inline">COPY_LINK</span>
-            </button>
-            {isAuthenticated && (
-              <button 
-                onClick={() => setIsDataStatusOpen(true)}
-                className="hidden lg:flex items-center gap-2 text-[10px] bg-blue-500 text-white border-2 border-black px-2 py-1 hover:bg-blue-600 transition-all cursor-pointer shadow-[2px_2px_0px_black] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-                title="View data persistence status"
-              >
-                <Database size={12} />
-                <span>DATA_STATUS</span>
-              </button>
-            )}
+            <div className="font-pixel text-sm md:text-base font-bold">VIBECODING TRACKER</div>
           </div>
           
           <div className="animate-pulse-red text-[10px] md:text-xs font-bold text-red-600 font-pixel tracking-widest border-2 border-black bg-red-100 px-3 py-1 shadow-[4px_4px_0px_black]">
@@ -1228,16 +1211,26 @@ export default function App() {
             MADE WITH LOVE IN CAMBRIDGE, UK
           </p>
           <div className="mt-2 font-pixel text-[8px] text-gray-400">
-            SYSTEM_VERSION_2.1 // BUILD_ID_20260216
+            VIBECODING TRACKER
           </div>
-          {isAuthenticated && (
+          <div className="mt-4 flex items-center justify-center gap-6 flex-wrap">
             <button
-              onClick={() => setIsDataStatusOpen(true)}
-              className="mt-4 font-pixel text-[8px] text-blue-600 hover:text-blue-800 underline cursor-pointer"
+              onClick={copyProfileLink}
+              className="font-pixel text-[8px] text-gray-600 hover:text-black underline cursor-pointer flex items-center gap-1"
             >
-              💾 VIEW DATA PERSISTENCE STATUS
+              <LinkIcon size={12} />
+              SHARE PROFILE
             </button>
-          )}
+            {isAuthenticated && (
+              <button
+                onClick={() => setIsDataStatusOpen(true)}
+                className="font-pixel text-[8px] text-blue-600 hover:text-blue-800 underline cursor-pointer flex items-center gap-1"
+              >
+                <Database size={12} />
+                VIEW DATA STATUS
+              </button>
+            )}
+          </div>
         </footer>
 
         <YearArchiveModal 
