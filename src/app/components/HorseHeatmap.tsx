@@ -180,7 +180,7 @@ export const HorseHeatmap = ({ startDate, data = [] }: HorseHeatmapProps) => {
         <div className="relative w-full h-full grid grid-cols-[repeat(32,1fr)] grid-rows-[repeat(32,1fr)] gap-[1px]">
           {PIXELS.map((point, index) => {
             const date = daysOfYear[index];
-            if (!date) return null;
+            if (!date) return <div key={index} />;
             const hours = getDayData(date);
             
             return (

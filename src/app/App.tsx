@@ -151,23 +151,28 @@ export default function App() {
       console.log('[LOAD] Loading user data from backend...');
       const data = await api.getUserData();
       
+      // Ensure arrays are actually arrays, not objects or null
+      const safeTasks = Array.isArray(data.tasks) ? data.tasks : [];
+      const safeLogs = Array.isArray(data.logs) ? data.logs : [];
+      const safeTimerSessions = Array.isArray(data.timerSessions) ? data.timerSessions : [];
+      
       console.log('[LOAD] Setting state with loaded data:', {
-        tasks: data.tasks?.length || 0,
-        logs: data.logs?.length || 0,
-        timerSessions: data.timerSessions?.length || 0,
+        tasks: safeTasks.length,
+        logs: safeLogs.length,
+        timerSessions: safeTimerSessions.length,
       });
       
-      setTasks(data.tasks);
-      setLogs(data.logs);
-      setTimerSessions(data.timerSessions || []);
-      setProjectName(data.settings.projectName);
-      setStartDate(data.settings.startDate);
-      setTargetProjects(data.settings.targetProjects);
-      setDocsLink(data.settings.docsLink);
-      setGhLink(data.settings.ghLink);
-      setSpotifyLink(data.settings.spotifyLink);
-      setTotalSeconds(data.timer.totalSeconds);
-      setHorseShuffle(data.horseRevealShuffle);
+      setTasks(safeTasks);
+      setLogs(safeLogs);
+      setTimerSessions(safeTimerSessions);
+      setProjectName(data.settings?.projectName || 'NEON_DRIFTER_V2');
+      setStartDate(data.settings?.startDate || new Date(Date.now() + 86400000).toISOString().split('T')[0]);
+      setTargetProjects(data.settings?.targetProjects || 100);
+      setDocsLink(data.settings?.docsLink || 'https://docs.vibe-os.dev');
+      setGhLink(data.settings?.ghLink || 'https://github.com/vibe-os');
+      setSpotifyLink(data.settings?.spotifyLink || 'https://spotify.com');
+      setTotalSeconds(data.timer?.totalSeconds || 0);
+      setHorseShuffle(data.horseRevealShuffle || null);
       
       console.log('[LOAD] User data loaded successfully');
       toast.success('Data loaded successfully!');
@@ -550,9 +555,9 @@ export default function App() {
 
   const handleImportData = async (data: any) => {
     try {
-      if (data.tasks) setTasks(data.tasks);
-      if (data.logs) setLogs(data.logs);
-      if (data.timerSessions) setTimerSessions(data.timerSessions);
+      if (Array.isArray(data.tasks)) setTasks(data.tasks);
+      if (Array.isArray(data.logs)) setLogs(data.logs);
+      if (Array.isArray(data.timerSessions)) setTimerSessions(data.timerSessions);
       if (data.settings) {
         setProjectName(data.settings.projectName || projectName);
         setStartDate(data.settings.startDate || startDate);
@@ -584,7 +589,9 @@ export default function App() {
   const yearProgress = Math.max(0, Math.min(100, Math.round((elapsedTime / totalTime) * 100)));
 
   // Daily Focus Progress for Reveal - based on timer sessions
-  const uniqueDaysCount = new Set(timerSessions.map(session => session.date)).size;
+  const uniqueDaysCount = Array.isArray(timerSessions) 
+    ? new Set(timerSessions.map(session => session.date)).size 
+    : 0;
   const focusProgress = targetProjects > 0 ? Math.min(100, (uniqueDaysCount / targetProjects) * 100) : 0;
 
   // Show loading screen while checking auth

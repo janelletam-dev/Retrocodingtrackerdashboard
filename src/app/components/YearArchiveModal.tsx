@@ -25,6 +25,12 @@ interface YearArchiveModalProps {
 export const YearArchiveModal = ({ isOpen, onClose, startDate, endDate, logs, timerSessions }: YearArchiveModalProps) => {
   if (!isOpen) return null;
 
+  // Safely handle timerSessions array
+  const safeTimerSessions = Array.isArray(timerSessions) ? timerSessions : [];
+  const daysWorked = new Set(safeTimerSessions.map(s => s.date)).size;
+  const totalSessions = safeTimerSessions.length;
+  const totalHours = Math.floor(safeTimerSessions.reduce((sum, s) => sum + s.duration, 0) / 3600);
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -66,22 +72,22 @@ export const YearArchiveModal = ({ isOpen, onClose, startDate, endDate, logs, ti
               <div className="flex items-center gap-4">
                 <div className="text-center px-4 py-2 border-2 border-dashed border-gray-400">
                   <div className="text-xs font-pixel text-gray-500 uppercase">Days Worked</div>
-                  <div className="text-2xl font-bold">{new Set(timerSessions.map(s => s.date)).size}</div>
+                  <div className="text-2xl font-bold">{daysWorked}</div>
                 </div>
                 <div className="text-center px-4 py-2 border-2 border-dashed border-gray-400">
                   <div className="text-xs font-pixel text-gray-500 uppercase">Total Sessions</div>
-                  <div className="text-2xl font-bold text-red-600">{timerSessions.length}</div>
+                  <div className="text-2xl font-bold text-red-600">{totalSessions}</div>
                 </div>
                 <div className="text-center px-4 py-2 border-2 border-dashed border-gray-400">
                   <div className="text-xs font-pixel text-gray-500 uppercase">Total Hours</div>
-                  <div className="text-2xl font-bold text-orange-600">{Math.floor(timerSessions.reduce((sum, s) => sum + s.duration, 0) / 3600)}</div>
+                  <div className="text-2xl font-bold text-orange-600">{totalHours}</div>
                 </div>
               </div>
             </div>
 
             <div className="bg-[#f0ece0] border-4 border-black p-8 shadow-[inset_4px_4px_0px_rgba(0,0,0,0.1)] flex flex-col items-center">
               <GitHubHeatmap 
-                data={timerSessions.reduce((acc: any[], session: TimerSession) => {
+                data={safeTimerSessions.reduce((acc: any[], session: TimerSession) => {
                   const dateStr = session.date;
                   const existing = acc.find(item => item.date === dateStr);
                   if (existing) {

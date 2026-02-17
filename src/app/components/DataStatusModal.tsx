@@ -42,31 +42,36 @@ export function DataStatusModal({
     reader.readAsText(file);
   };
 
+  // Safely handle arrays
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  const safeTimerSessions = Array.isArray(timerSessions) ? timerSessions : [];
+
   const dataStats = [
     {
       label: 'Today\'s Tasks',
-      count: tasks.length,
+      count: safeTasks.length,
       description: 'Active tasks in your workflow',
       icon: '✓',
       color: 'bg-green-100 border-green-500',
     },
     {
       label: 'Victory Log',
-      count: logs.length,
+      count: safeLogs.length,
       description: 'Completed achievements',
       icon: '🏆',
       color: 'bg-yellow-100 border-yellow-500',
     },
     {
       label: 'Timer Sessions',
-      count: timerSessions.length,
+      count: safeTimerSessions.length,
       description: 'Focus sessions tracked',
       icon: '⏱️',
       color: 'bg-blue-100 border-blue-500',
     },
     {
       label: 'Days Worked',
-      count: new Set(timerSessions.map((s: any) => s.date)).size,
+      count: new Set(safeTimerSessions.map((s: any) => s.date)).size,
       description: 'Unique active days',
       icon: '📅',
       color: 'bg-purple-100 border-purple-500',
