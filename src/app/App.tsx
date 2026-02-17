@@ -26,6 +26,7 @@ import {
   X as XIcon
 } from 'lucide-react';
 import timeToRestImg from '../assets/be18bd135608a92104663a585d83e802774f217e.png';
+import horseQuoteImage from '../assets/horse-quote-image.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast, Toaster } from 'sonner';
 import * as api from '../utils/api';
@@ -900,7 +901,7 @@ export default function App() {
                 </div>
               </h3>
               
-              <ul className="space-y-4 text-xl md:text-2xl mb-8">
+              <ul className="space-y-4 text-xl md:text-2xl max-h-[280px] overflow-y-auto custom-scrollbar pr-2 mb-6">
                 <AnimatePresence mode="popLayout">
                   {tasks.map(task => (
                     <motion.li 
@@ -1003,7 +1004,7 @@ export default function App() {
                 <span className="text-[10px] text-gray-500 font-pixel mt-auto mb-1">Total Victories: {logs.length}</span>
               </h3>
               
-              <ul className="space-y-3 text-gray-700 font-mono text-sm max-h-[200px] overflow-y-auto custom-scrollbar pr-2 mb-6">
+              <ul className="space-y-3 text-gray-700 font-mono text-sm max-h-[240px] overflow-y-auto custom-scrollbar pr-2 mb-6">
                 {logs.length > 0 ? (
                   logs.map(log => (
                     <motion.li 
@@ -1099,6 +1100,15 @@ export default function App() {
                 Open Full Victory Log
               </button>
             </RetroCard>
+
+            {/* Horse quote image */}
+            <div className="bg-white border-2 border-black p-4 shadow-[6px_6px_0px_black] overflow-hidden">
+              <img 
+                src={horseQuoteImage} 
+                alt="The Year of the Horse represents freedom, breakthrough, strength, passion and moving forward boldly without fear" 
+                className="w-full h-auto object-contain"
+              />
+            </div>
           </div>
 
           {/* RIGHT COLUMN */}
