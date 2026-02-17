@@ -58,13 +58,16 @@ export const mset = async (keys: string[], values: any[]): Promise<void> => {
 };
 
 // Gets multiple key-value pairs from the database.
+// Returns values in the same order as the input keys (undefined for missing keys).
 export const mget = async (keys: string[]): Promise<any[]> => {
+  if (keys.length === 0) return [];
   const supabase = client()
-  const { data, error } = await supabase.from("kv_store_91171845").select("value").in("key", keys);
+  const { data, error } = await supabase.from("kv_store_91171845").select("key, value").in("key", keys);
   if (error) {
     throw new Error(error.message);
   }
-  return data?.map((d) => d.value) ?? [];
+  const byKey = new Map<string, any>((data ?? []).map((d) => [d.key, d.value]));
+  return keys.map((k) => byKey.get(k));
 };
 
 // Deletes multiple key-value pairs from the database.

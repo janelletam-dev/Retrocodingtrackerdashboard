@@ -1,4 +1,4 @@
-import image_08acad3607eefb483c16193df9ad599d69ef6ef0 from 'figma:asset/08acad3607eefb483c16193df9ad599d69ef6ef0.png'
+import heroImg from '../assets/mascot-hero.png';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RetroCard } from './components/RetroCard';
 import { RetroButton } from './components/RetroButton';
@@ -25,8 +25,7 @@ import {
   Trash2,
   X as XIcon
 } from 'lucide-react';
-import pixelHorseHero from 'figma:asset/f7e8305ecb8b6adb45346ed46ec1d753558ee4bf.png';
-import timeToRestImg from 'figma:asset/be18bd135608a92104663a585d83e802774f217e.png';
+import timeToRestImg from '../assets/be18bd135608a92104663a585d83e802774f217e.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast, Toaster } from 'sonner';
 import * as api from '../utils/api';
@@ -385,40 +384,46 @@ export default function App() {
     return `${h}:${m}:${s}`;
   };
 
+  // Start or pause only — keeps current time on screen when paused
   const handleTimerToggle = () => {
     if (!isRunning) {
-      // Starting timer - record start time
-      currentSessionStartTime.current = new Date();
-      currentSessionStartSeconds.current = totalSeconds;
-      setIsRunning(true);
-      toast.info('Focus session started!');
-    } else {
-      // Stopping timer - log the session
-      if (currentSessionStartTime.current) {
-        const endTime = new Date();
-        const sessionDuration = totalSeconds - currentSessionStartSeconds.current;
-        
-        // Only log sessions that are at least 1 minute long
-        if (sessionDuration >= 60) {
-          const newSession: TimerSession = {
-            id: Math.random().toString(36).substr(2, 9),
-            startTime: currentSessionStartTime.current.toISOString(),
-            endTime: endTime.toISOString(),
-            duration: sessionDuration,
-            date: endTime.toISOString().split('T')[0] // YYYY-MM-DD
-          };
-          
-          setTimerSessions(prev => [newSession, ...prev]);
-          toast.success(`Session logged: ${Math.floor(sessionDuration / 60)} minutes`);
-        } else {
-          toast.info('Session too short to log (minimum 1 minute)');
-        }
+      // Starting (or resuming): record session start only when beginning from 00:00
+      if (totalSeconds === 0) {
+        currentSessionStartTime.current = new Date();
+        currentSessionStartSeconds.current = 0;
       }
-      
+      setIsRunning(true);
+      toast.info(totalSeconds === 0 ? 'Focus session started!' : 'Resumed');
+    } else {
+      // Pause only — do not log or reset; time stays on screen
       setIsRunning(false);
-      currentSessionStartTime.current = null;
-      currentSessionStartSeconds.current = 0;
     }
+  };
+
+  // End session: log to focus progress & annual repo, then reset timer to 00:00
+  const handleEndSession = () => {
+    if (currentSessionStartTime.current != null) {
+      const endTime = new Date();
+      const sessionDuration = totalSeconds - currentSessionStartSeconds.current;
+
+      if (sessionDuration >= 60) {
+        const newSession: TimerSession = {
+          id: Math.random().toString(36).substr(2, 9),
+          startTime: currentSessionStartTime.current.toISOString(),
+          endTime: endTime.toISOString(),
+          duration: sessionDuration,
+          date: endTime.toISOString().split('T')[0],
+        };
+        setTimerSessions((prev) => [newSession, ...prev]);
+        toast.success(`Session logged: ${Math.floor(sessionDuration / 60)} min — timer reset`);
+      } else {
+        toast.info('Session too short to log (min 1 min). Timer reset.');
+      }
+    }
+    setTotalSeconds(0);
+    setIsRunning(false);
+    currentSessionStartTime.current = null;
+    currentSessionStartSeconds.current = 0;
   };
 
   const handleAddTask = (e?: React.FormEvent) => {
@@ -794,7 +799,7 @@ export default function App() {
             {/* Character Asset - Responsive Sizing */}
             <div className="w-48 md:w-80 flex items-center justify-center animate-float">
               <img 
-                src={image_08acad3607eefb483c16193df9ad599d69ef6ef0} 
+                src={heroImg} 
                 className="w-full h-auto drop-shadow-[8px_8px_0px_rgba(0,0,0,0.1)]" 
                 alt="Pixel Horse Character" 
               />
@@ -811,18 +816,20 @@ export default function App() {
                 onClick={handleTimerToggle}
                 className="w-full py-4 text-lg"
               >
-                {isRunning ? 'PAUSE' : 'INITIATE'}
+                {isRunning ? 'PAUSE' : totalSeconds > 0 ? 'RESUME' : 'INITIATE'}
               </RetroButton>
 
-              <AnimatePresence>
+              {/* When running: "Time to rest" = end session (log + reset). When paused: "End session" = log + reset. */}
+              <AnimatePresence mode="wait">
                 {isRunning && (
                   <motion.button
+                    key="time-to-rest"
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.9 }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={handleTimerToggle}
+                    onClick={handleEndSession}
                     className="w-full mt-2 relative group cursor-pointer"
                   >
                     <img 
@@ -830,6 +837,18 @@ export default function App() {
                       alt="Time to rest" 
                       className="w-full h-auto drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]"
                     />
+                  </motion.button>
+                )}
+                {!isRunning && totalSeconds > 0 && (
+                  <motion.button
+                    key="end-session"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    onClick={handleEndSession}
+                    className="w-full mt-2 font-pixel text-[10px] font-bold uppercase py-3 border-2 border-black bg-red-100 hover:bg-red-200 transition-colors shadow-[2px_2px_0px_black]"
+                  >
+                    End session & reset
                   </motion.button>
                 )}
               </AnimatePresence>

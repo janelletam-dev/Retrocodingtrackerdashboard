@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import horseImg from 'figma:asset/f7e8305ecb8b6adb45346ed46ec1d753558ee4bf.png';
+import horseImg from '../../assets/mascot-horse.png';
 
 interface HorseRevealProps {
   progress: number; // 0 to 100

@@ -32,9 +32,9 @@ app.use(
 async function getAuthenticatedUserId(request: Request): Promise<string | null> {
   try {
     const supabase = createClient(
-      // Prefer SB_ variables if present, fall back to SUPABASE_ defaults
-      Deno.env.get('SB_URL') ?? Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SB_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      // Use the canonical Supabase project URL and service role key
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
     
     const accessToken = request.headers.get('Authorization')?.split(' ')[1];
@@ -78,8 +78,8 @@ app.post("/make-server-91171845/signup", async (c) => {
     }
     
     const supabase = createClient(
-      Deno.env.get('SB_URL') ?? '',
-      Deno.env.get('SB_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
     
     const { data, error } = await supabase.auth.admin.createUser({
