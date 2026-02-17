@@ -29,7 +29,10 @@ export const YearArchiveModal = ({ isOpen, onClose, startDate, endDate, logs, ti
   const safeTimerSessions = Array.isArray(timerSessions) ? timerSessions : [];
   const daysWorked = new Set(safeTimerSessions.map(s => s.date)).size;
   const totalSessions = safeTimerSessions.length;
-  const totalHours = Math.floor(safeTimerSessions.reduce((sum, s) => sum + s.duration, 0) / 3600);
+  const totalSeconds = safeTimerSessions.reduce((sum, s) => sum + s.duration, 0);
+  const totalHours = Math.floor(totalSeconds / 3600);
+  const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+  const totalTimeLabel = totalHours > 0 ? `${totalHours}h ${totalMinutes}m` : `${totalMinutes}m`;
 
   return (
     <AnimatePresence>
@@ -52,7 +55,7 @@ export const YearArchiveModal = ({ isOpen, onClose, startDate, endDate, logs, ti
         >
           {/* Header */}
           <div className="flex justify-between items-center border-b-2 border-black pb-4 mb-6 sticky top-0 bg-[#e6e2d1] z-10">
-            <h2 className="text-xl font-bold font-pixel tracking-tighter">ANNUAL_LOG_REPOSITORY</h2>
+            <h2 className="text-xl font-bold font-pixel tracking-tighter">DAILY_LOG_REPOSITORY</h2>
             <button 
               onClick={onClose}
               className="p-1 hover:bg-black hover:text-white border-2 border-transparent hover:border-black transition-all"
@@ -66,7 +69,7 @@ export const YearArchiveModal = ({ isOpen, onClose, startDate, endDate, logs, ti
               <div className="space-y-1">
                 <div className="text-[10px] font-pixel text-gray-500 uppercase">Mission Range</div>
                 <div className="text-sm font-bold font-pixel">
-                  {startDate.toUpperCase()} — {endDate.toUpperCase()}
+                  {startDate} — {endDate}
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -79,8 +82,8 @@ export const YearArchiveModal = ({ isOpen, onClose, startDate, endDate, logs, ti
                   <div className="text-2xl font-bold text-red-600">{totalSessions}</div>
                 </div>
                 <div className="text-center px-4 py-2 border-2 border-dashed border-gray-400">
-                  <div className="text-xs font-pixel text-gray-500 uppercase">Total Hours</div>
-                  <div className="text-2xl font-bold text-orange-600">{totalHours}</div>
+                  <div className="text-xs font-pixel text-gray-500 uppercase">Total time (vibe coded)</div>
+                  <div className="text-2xl font-bold text-orange-600">{totalTimeLabel}</div>
                 </div>
               </div>
             </div>

@@ -278,6 +278,17 @@ export default function App() {
     }
   }, [totalSeconds, isAuthenticated, isLoadingData, debouncedSave]);
 
+  // Warn before leaving if there's unlogged timer time (so you don't lose it)
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (totalSeconds >= 60) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [totalSeconds]);
+
   // Save horse shuffle when it's generated
   const handleShuffleGenerated = useCallback((shuffle: number[]) => {
     setHorseShuffle(shuffle);
@@ -415,7 +426,11 @@ export default function App() {
           duration: sessionDuration,
           date: endTime.toISOString().split('T')[0],
         };
-        setTimerSessions((prev) => [newSession, ...prev]);
+        const updatedSessions = [newSession, ...timerSessions];
+        setTimerSessions(updatedSessions);
+        if (isAuthenticated) {
+          immediateSave(() => api.saveTimerSessions(updatedSessions));
+        }
         toast.success(`Session logged: ${Math.floor(sessionDuration / 60)} min — timer reset`);
       } else {
         toast.info('Session too short to log (min 1 min). Timer reset.');
@@ -535,7 +550,7 @@ export default function App() {
   };
 
   const copyProfileLink = () => {
-    const deployedUrl = 'https://retrovibecoding.figma.site/';
+    const deployedUrl = 'https://retrocodingtrackerdashboard.vercel.app/';
     navigator.clipboard.writeText(deployedUrl);
     toast.success("Link copied!");
   };
@@ -601,6 +616,7 @@ export default function App() {
   const endDateObj = new Date(startDateObj);
   endDateObj.setFullYear(endDateObj.getFullYear() + 1);
   const endDateFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+  const endDateIso = endDateObj.getFullYear() + '-' + String(endDateObj.getMonth() + 1).padStart(2, '0') + '-' + String(endDateObj.getDate()).padStart(2, '0');
   
   const now = new Date();
   const totalTime = endDateObj.getTime() - startDateObj.getTime();
@@ -618,7 +634,7 @@ export default function App() {
     return (
       <div className="p-4 md:p-8 min-h-screen relative overflow-x-hidden bg-[#e6e2d1] flex items-center justify-center">
         <div className="retro-card p-12 text-center">
-          <div className="font-pixel text-xl mb-4">VIBECODING TRACKER</div>
+          <div className="font-pixel text-xl mb-4">VIBECODING PROGRESS TRACKER</div>
           <div className="font-pixel text-sm text-gray-600">INITIALIZING SYSTEM...</div>
         </div>
       </div>
@@ -634,10 +650,10 @@ export default function App() {
         {/* TOP NAV */}
         <header className="flex flex-col md:flex-row justify-between items-center border-b-2 border-black pb-4 gap-4 md:gap-0 mb-8">
           <div className="flex items-center gap-4">
-            <div className="font-pixel text-sm md:text-base font-bold">VIBECODING TRACKER</div>
+            <div className="font-pixel text-sm md:text-base font-bold">VIBECODING PROGRESS TRACKER</div>
           </div>
           
-          <div className="animate-pulse-red text-[10px] md:text-xs font-bold text-red-600 font-pixel tracking-widest border-2 border-black bg-red-100 px-3 py-1 shadow-[4px_4px_0px_black]">
+          <div className="animate-pulse-red text-[10px] md:text-xs font-bold text-red-600 font-pixel tracking-widest border-2 border-black bg-red-100 px-3 py-1 shadow-[4px_4px_0px_black] text-center">
             🔥 YEAR OF THE FIRE HORSE
           </div>
 
@@ -712,7 +728,7 @@ export default function App() {
                         onClick={() => setIsEditingStartDate(true)}
                         className="font-pixel text-[10px] text-black font-bold hover:bg-red-50 text-left transition-all"
                       >
-                        {startDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                        {startDate}
                       </button>
                     ) : (
                       <input 
@@ -728,7 +744,7 @@ export default function App() {
                   </div>
                   <div className="flex flex-col gap-1 border-l-2 border-gray-300 pl-3">
                     <div className="font-pixel text-[8px] text-gray-400 uppercase tracking-tighter font-bold">MISSION_END</div>
-                    <div className="font-pixel text-[10px] text-gray-400 font-bold">{endDateFormatted}</div>
+                    <div className="font-pixel text-[10px] text-gray-400 font-bold">{endDateIso}</div>
                   </div>
                 </div>
               </div>
@@ -1168,7 +1184,7 @@ export default function App() {
                 onClick={() => setIsYearArchiveOpen(true)}
                 className="w-full mt-6 text-[10px] font-pixel text-center text-gray-500 hover:text-black border-2 border-dashed border-gray-300 hover:border-black py-3 transition-all hover:bg-white uppercase font-bold"
               >
-                Open Full Annual Repository
+                Open Full Daily Log Repository
               </button>
             </RetroCard>
 
@@ -1221,7 +1237,7 @@ export default function App() {
             MADE WITH LOVE IN CAMBRIDGE, UK
           </p>
           <div className="mt-2 font-pixel text-[8px] text-gray-400">
-            VIBECODING TRACKER
+            VIBECODING PROGRESS TRACKER
           </div>
           <div className="mt-4 flex items-center justify-center gap-6 flex-wrap">
             <button
@@ -1247,7 +1263,7 @@ export default function App() {
           isOpen={isYearArchiveOpen}
           onClose={() => setIsYearArchiveOpen(false)}
           startDate={startDate}
-          endDate={endDateFormatted}
+          endDate={endDateIso}
           logs={logs}
           timerSessions={timerSessions}
         />
