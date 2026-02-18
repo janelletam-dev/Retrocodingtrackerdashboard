@@ -1029,8 +1029,8 @@ export default function App() {
                       key={log.id} 
                       className="flex gap-4 p-2 hover:bg-white transition-colors border-b border-black/5 last:border-0 group"
                     >
-                      <span className="font-bold text-black min-w-[70px] shrink-0">
-                        [{new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}]
+                      <span className="text-gray-500 min-w-[70px] shrink-0 text-sm">
+                        [{new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}]
                       </span>
                       {editingLogId === log.id ? (
                         <>
@@ -1043,7 +1043,7 @@ export default function App() {
                               if (e.key === 'Enter') handleSaveLogEdit();
                               if (e.key === 'Escape') handleCancelLogEdit();
                             }}
-                            className="flex-1 border-b border-black bg-transparent focus:outline-none uppercase text-sm"
+                            className="flex-1 border-b border-black bg-transparent focus:outline-none text-sm"
                           />
                           <button
                             onClick={handleSaveLogEdit}
@@ -1062,7 +1062,7 @@ export default function App() {
                         </>
                       ) : (
                         <>
-                          <span className="uppercase flex-1">{log.text}</span>
+                          <span className="flex-1">{log.text}</span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => handleEditLog(log.id)}
