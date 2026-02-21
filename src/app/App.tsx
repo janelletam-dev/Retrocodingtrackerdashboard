@@ -163,14 +163,17 @@ export default function App() {
       const safeTasks = Array.isArray(data.tasks) ? data.tasks : [];
       const safeLogs = Array.isArray(data.logs) ? data.logs : [];
       const safeTimerSessions = Array.isArray(data.timerSessions) ? data.timerSessions : [];
+      // Don't show a task in the to-do list if it was already moved to Small Wins (same id in logs)
+      const logIds = new Set(safeLogs.map((l: Log) => l.id));
+      const tasksWithoutMoved = safeTasks.filter((t: Task) => !logIds.has(t.id));
       
       console.log('[LOAD] Setting state with loaded data:', {
-        tasks: safeTasks.length,
+        tasks: tasksWithoutMoved.length,
         logs: safeLogs.length,
         timerSessions: safeTimerSessions.length,
       });
       
-      setTasks(safeTasks);
+      setTasks(tasksWithoutMoved);
       setLogs(safeLogs);
       setTimerSessions(safeTimerSessions);
       setProjectName(data.settings?.projectName || 'NEON_DRIFTER_V2');
@@ -467,8 +470,23 @@ export default function App() {
         text: taskToComplete.text,
         date: now.toISOString()
       };
-      setLogs([newLog, ...logs]);
-      setTasks(tasks.filter(t => t.id !== id));
+      const newTasks = tasks.filter(t => t.id !== id);
+      const newLogs = [newLog, ...logs];
+      setLogs(newLogs);
+      setTasks(newTasks);
+      // Save both atomically so backend never has task in both lists (avoids duplicate on next login)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (isAuthenticated) {
+        immediateSave(async () => {
+          await Promise.all([
+            api.saveTasks(newTasks),
+            api.saveLogs(newLogs),
+          ]);
+        });
+      }
       toast.success("Task moved to Small Wins!");
     } else {
       setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
